@@ -1,0 +1,56 @@
+//@version=5
+indicator("EMA 9/200 + RSI + Auto TP/SL Lines", overlay=true, max_lines_count=500)
+
+// --- 1. ตั้งค่า Indicators และระยะ TP/SL ---
+// กำหนดระยะจุดตายตัว (สำหรับทองคำ 6.0 = 600 จุด, 4.0 = 400 จุด)
+tp_dist = input.float(6.0, title="ระยะ TP (เช่น 6.0 = 600 จุด)")
+sl_dist = input.float(4.0, title="ระยะ SL (เช่น 4.0 = 400 จุด)")
+
+ema9   = ta.ema(close, 9)
+ema200 = ta.ema(close, 200)
+rsi    = ta.rsi(close, 14)
+
+plot(ema9, color=color.blue, title="EMA 9", linewidth=2)
+plot(ema200, color=color.orange, title="EMA 200", linewidth=3)
+
+// --- 2. เงื่อนไขสัญญาณ ---
+buySignal  = ta.crossover(ema9, ema200) and (rsi > 50)
+sellSignal = ta.crossunder(ema9, ema200) and (rsi < 50)
+
+plotshape(series=buySignal, title="BUY", text="BUY", style=shape.labelup, location=location.belowbar, color=color.green, textcolor=color.white, size=size.normal)
+plotshape(series=sellSignal, title="SELL", text="SELL", style=shape.labeldown, location=location.abovebar, color=color.red, textcolor=color.white, size=size.normal)
+
+// --- 3. ระบบวาดเส้น TP / SL อัตโนมัติ ---
+var line active_tp = na
+var line active_sl = na
+var int trade_dir = 0 // 1 = กำลังถือ BUY, -1 = กำลังถือ SELL, 0 = ว่าง
+
+// เมื่อเกิดสัญญาณ BUY ใหม่
+if buySignal
+    trade_dir := 1
+    // วาดเส้นใหม่
+    active_tp := line.new(bar_index, close + tp_dist, bar_index, close + tp_dist, color=color.green, style=line.style_solid, width=2)
+    active_sl := line.new(bar_index, close - sl_dist, bar_index, close - sl_dist, color=color.red, style=line.style_solid, width=2)
+
+// เมื่อเกิดสัญญาณ SELL ใหม่
+else if sellSignal
+    trade_dir := -1
+    // วาดเส้นใหม่
+    active_tp := line.new(bar_index, close - tp_dist, bar_index, close - tp_dist, color=color.green, style=line.style_solid, width=2)
+    active_sl := line.new(bar_index, close + sl_dist, bar_index, close + sl_dist, color=color.red, style=line.style_solid, width=2)
+
+// จัดการความยาวเส้น (ยืดเส้นออกไปเรื่อยๆ ถ่ายังไม่ชน)
+else
+    if trade_dir != 0
+        // ขยายเส้นไปที่แท่งเทียนปัจจุบัน
+        line.set_x2(active_tp, bar_index)
+        line.set_x2(active_sl, bar_index)
+        
+        // เช็กว่าราคาวิ่งไปชนเส้น TP หรือ SL หรือยัง? ถ้าชนแล้วให้ "จบเส้น"
+        if trade_dir == 1 // ขา BUY
+            if high >= line.get_y1(active_tp) or low <= line.get_y1(active_sl)
+                trade_dir := 0 // ชนเป้าแล้ว หยุดยืดเส้น
+                
+        if trade_dir == -1 // ขา SELL
+            if low <= line.get_y1(active_tp) or high >= line.get_y1(active_sl)
+                trade_dir := 0 // ชนเป้าแล้ว หยุดยืดเส้น
