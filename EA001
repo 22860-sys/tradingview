@@ -1,0 +1,39 @@
+//@version=5
+strategy("EMA 9/200 Simple Cross + RSI Strategy", overlay=true, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+
+// --- 1. ตั้งค่า Indicators ---
+ema9   = ta.ema(close, 9)
+ema200 = ta.ema(close, 200)
+rsi    = ta.rsi(close, 14)
+
+// วาดเส้นบนกราฟให้อ่านง่าย
+plot(ema9, color=color.blue, title="EMA 9 (เส้นเร็ว)", linewidth=2)
+plot(ema200, color=color.red, title="EMA 200 (เส้นช้า)", linewidth=3)
+
+// --- 2. เงื่อนไขการตัดกัน + RSI ---
+// BUY: EMA 9 ตัดขึ้น EMA 200  และ RSI > 50
+longCondition = ta.crossover(ema9, ema200) and (rsi > 50)
+
+// SELL: EMA 9 ตัดลง EMA 200 และ RSI < 50
+shortCondition = ta.crossunder(ema9, ema200) and (rsi < 50)
+
+// --- 3. บริหารความเสี่ยง (Stop Loss & Take Profit) ---
+swingLow  = ta.lowest(low, 5)
+swingHigh = ta.highest(high, 5)
+
+var float longSL  = na
+var float longTP  = na
+var float shortSL = na
+var float shortTP = na
+
+if (longCondition and strategy.position_size == 0)
+    longSL := swingLow
+    longTP := close + ((close - longSL) * 1.5) // RR 1:1.5
+    strategy.entry("BUY", strategy.long)
+    strategy.exit("Exit BUY", "BUY", stop=longSL, limit=longTP)
+
+if (shortCondition and strategy.position_size == 0)
+    shortSL := swingHigh
+    shortTP := close - ((shortSL - close) * 1.5) // RR 1:1.5
+    strategy.entry("SELL", strategy.short)
+    strategy.exit("Exit SELL", "SELL", stop=shortSL, limit=shortTP)
