@@ -1,0 +1,27 @@
+//@version=5
+indicator("EMA 9/200 + RSI Clean Signals", overlay=true)
+
+// --- 1. ตั้งค่า Indicators ---
+ema9   = ta.ema(close, 9)
+ema200 = ta.ema(close, 200)
+rsi    = ta.rsi(close, 14)
+
+// วาดเส้น EMA บนกราฟ
+plot(ema9, color=color.blue, title="EMA 9", linewidth=2)
+plot(ema200, color=color.orange, title="EMA 200", linewidth=3)
+
+// --- 2. เงื่อนไขการเกิดสัญญาณ ---
+// BUY: EMA 9 ตัดขึ้น EMA 200 และ RSI > 50
+buySignal  = ta.crossover(ema9, ema200) and (rsi > 50)
+
+// SELL: EMA 9 ตัดลง EMA 200 และ RSI < 50
+sellSignal = ta.crossunder(ema9, ema200) and (rsi < 50)
+
+// --- 3. วาดป้ายสัญญาณขนาดใหญ่ชัดเจนบนกราฟ ---
+plotshape(series=buySignal, title="BUY Signal", text="BUY", style=shape.labelup, location=location.belowbar, color=color.green, textcolor=color.white, size=size.normal)
+
+plotshape(series=sellSignal, title="SELL Signal", text="SELL", style=shape.labeldown, location=location.abovebar, color=color.red, textcolor=color.white, size=size.normal)
+
+// --- 4. ตั้งค่าแจ้งเตือน (Alert) เผื่อใช้กับมือถือ ---
+alertcondition(buySignal, title="สัญญาณ BUY", message="เกิดสัญญาณ BUY: EMA 9 ตัดขึ้น EMA 200 + RSI > 50")
+alertcondition(sellSignal, title="สัญญาณ SELL", message="เกิดสัญญาณ SELL: EMA 9 ตัดลง EMA 200 + RSI < 50")
