@@ -1,0 +1,40 @@
+//@version=5
+indicator("EMA 9/200 + RSI + ATR (TP600/SL400)", overlay=true)
+
+// --- 1. ตั้งค่า Indicators ---
+ema9   = ta.ema(close, 9)
+ema200 = ta.ema(close, 200)
+rsi    = ta.rsi(close, 14)
+atr    = ta.atr(14) // เพิ่ม ATR 14
+
+// วาดเส้น EMA
+plot(ema9, color=color.blue, title="EMA 9", linewidth=2)
+plot(ema200, color=color.orange, title="EMA 200", linewidth=3)
+
+// --- 2. เงื่อนไขสัญญาณ (คงเดิม 100%) ---
+buySignal  = ta.crossover(ema9, ema200) and (rsi > 50)
+sellSignal = ta.crossunder(ema9, ema200) and (rsi < 50)
+
+// --- 3. วาดป้ายสัญญาณ BUY / SELL ---
+plotshape(series=buySignal, title="BUY", text="BUY\n(TP600/SL400)", style=shape.labelup, location=location.belowbar, color=color.green, textcolor=color.white, size=size.normal)
+plotshape(series=sellSignal, title="SELL", text="SELL\n(TP600/SL400)", style=shape.labeldown, location=location.abovebar, color=color.red, textcolor=color.white, size=size.normal)
+
+// --- 4. ตารางบอกสถานะและจุดตั้ง TP/SL (Dashboard มุมขวาล่าง) ---
+var table panel = table.new(position.bottom_right, 2, 4, border_width = 1)
+if barstate.islast
+    table.cell(panel, 0, 0, "Current ATR:", bgcolor=color.gray, text_color=color.white)
+    table.cell(panel, 1, 0, str.tostring(atr, "#.##"), bgcolor=color.black, text_color=color.white)
+    
+    // คำนวณราคากรณีมีสัญญาณล่าสุด
+    var float entry_price = na
+    var string last_sig = "None"
+    
+    if buySignal
+        entry_price := close
+        last_sig := "BUY"
+    if sellSignal
+        entry_price := close
+        last_sig := "SELL"
+        
+    table.cell(panel, 0, 1, "Last Signal:", bgcolor=color.gray, text_color=color.white)
+    table.cell(panel, 1, 1, last_sig, bgcolor=last_sig == "BUY" ? color.green : last_sig == "SELL" ? color.red : color.black, text_color=color.white)
